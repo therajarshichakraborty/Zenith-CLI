@@ -1,11 +1,9 @@
-import express, { type Application, Request, Response } from "express";
+import express, { type Application, Request, Response,json } from "express";
 
 export async function createApp(): Promise<Application> {
   const app: Application = express();
+  app.use(json());
 
-  app.use(express.json());
-
-  // Routes
   app.get("/", (req: Request, res: Response) => {
     res.status(200).json({
       name: "server",

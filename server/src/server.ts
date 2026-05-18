@@ -5,8 +5,8 @@ import { createApp } from "./app"
     const app = await createApp();
     const server = createServer(app)
 
-    server.listen(3000,()=>{
-        console.log(`server is listning to the port http://localhost:${3000}`);
+    server.listen(4000,()=>{
+        console.log(`server is listning to the port http://localhost:${4000}`);
     })
 }
 
