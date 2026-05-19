@@ -1,37 +1,27 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "server of zenith-cli",
-  "main": "src/server.ts",
-  "scripts": {
-    "dev": "bun --watch src/server.ts"
-  },
-  "author": "Rajarshi Chakraborty",
-  "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^7.8.0",
-    "bcrypt": "^6.0.0",
-    "cookie-parser": "^1.4.7",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.9.0",
+    "better-auth": "^1.6.11",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "prettier": "^3.8.3",
-    "winston": "^3.19.0",
-    "zod": "^4.4.3"
+    "prisma": "6",
+    "typescript": "^6.0.3"
   },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/bcrypt": "^6.0.0",
-    "@types/cookie-parser": "^1.4.10",
-    "@types/cors": "^2.8.19",
-    "@types/dotenv": "^8.2.3",
-    "@types/express": "^5.0.6",
-    "@types/node": "^25.9.0",
-    "eslint": "^10.4.0",
-    "prisma": "^7.8.0",
-    "ts-node": "^10.9.2",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.3"
-  }
+  "private": true,
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
+  },
+  "type": "module"
 }
