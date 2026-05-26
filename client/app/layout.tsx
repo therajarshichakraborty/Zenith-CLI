@@ -23,7 +23,9 @@ export default function RootLayout({
           defaultTheme="dark"
           enableSystem
         >
-          <ThemeToggle />
+         <div className="fixed right-8 top-8 z-50">
+            <ThemeToggle />
+          </div>
           {children}
         </ThemeProvider>
       </body>

@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
         hostname: "www.shutterstock.com",
       },
     ],
+    domains: ["avatars.githubusercontent.com"],
   },
 };
 
