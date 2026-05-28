@@ -27,19 +27,19 @@ export function LoginForm() {
 
       <div className="relative z-10 flex max-w-5xl flex-col items-center text-center">
         <div className="mb-6 flex items-center gap-5">
-          <div className="h-[1px] w-14 bg-gradient-to-r from-red-500 via-pink-500 to-purple-500" />
+          <div className="h-[1px] w-14 bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-500" />
 
-          <h2 className="bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 bg-clip-text font-serif text-4xl italic tracking-wide text-transparent md:text-5xl">
+          <h2 className="bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-500 bg-clip-text font-serif text-4xl italic tracking-wide text-transparent md:text-5xl">
             Welcome to
           </h2>
 
-          <div className="h-[1px] w-14 bg-gradient-to-r from-red-500 via-pink-500 to-purple-500" />
+          <div className="h-[1px] w-14 bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-500" />
         </div>
-        <h1 className="bg-gradient-to-r from-red-600 via-pink-500 to-purple-600 bg-clip-text text-7xl font-black tracking-tight text-transparent md:text-9xl">
+        <h1 className="bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-500 bg-clip-text text-7xl font-black tracking-tight text-transparent md:text-9xl">
           ZenithCLI
         </h1>
 
-        <div className="mt-8 h-[3px] w-52 rounded-full bg-gradient-to-r from-red-500 via-pink-500 to-purple-500" />
+        <div className="mt-8 h-[3px] w-52 rounded-full bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-500" />
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-sm font-medium text-muted-foreground">
           <span>Build</span>
@@ -53,10 +53,9 @@ export function LoginForm() {
         </div>
 
         <p className="mt-10 max-w-3xl text-lg leading-relaxed text-muted-foreground">
-          ZenithCLI is an advanced AI-powered CLI platform for developers,
-          enabling intelligent code assistance, automation, authentication
-          management, workflow optimization, and productivity enhancement
-          through a fast and scalable terminal-first experience.
+          ZenithCLI is an advanced AI-powered CLI platform for developers, enabling intelligent code assistance,
+          automation, authentication management, workflow optimization, and productivity enhancement through a fast and
+          scalable terminal-first experience.
         </p>
 
         <div className="mt-12 w-full max-w-sm">
@@ -70,13 +69,7 @@ export function LoginForm() {
             {isLoading ? (
               <Loader2 className="mr-2 size-5 animate-spin" />
             ) : (
-              <Image
-                src="/image.png"
-                alt="Github"
-                height={20}
-                width={20}
-                className="mr-2 size-5 dark:invert"
-              />
+              <Image src="/image.png" alt="Github" height={20} width={20} className="mr-2 size-5 dark:invert" />
             )}
 
             {isLoading ? "Connecting..." : "Continue with GitHub"}

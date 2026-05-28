@@ -16,16 +16,10 @@ export function ThemeToggle() {
 
   return (
     <button
-      onClick={() =>
-        setTheme(theme === "dark" ? "light" : "dark")
-      }
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
       className="fixed right-5 top-5 rounded-lg border border-border bg-card p-3 text-foreground"
     >
-      {theme === "dark" ? (
-        <Sun className="size-5" />
-      ) : (
-        <Moon className="size-5" />
-      )}
+      {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
     </button>
   );
 }

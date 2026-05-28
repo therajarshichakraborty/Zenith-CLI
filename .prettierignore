@@ -1,0 +1,8 @@
+node_modules/
+.bun
+.git
+.gitignore
+dist
+*.tsbuildinfo
+.next 
+generated/
