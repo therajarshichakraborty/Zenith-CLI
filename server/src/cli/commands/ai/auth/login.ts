@@ -14,6 +14,7 @@ import dotenv from "dotenv";
 //import prisma from "../../../../lib/db.ts"
 
 dotenv.config();
+dotenv.config({ path: path.join(process.cwd(), "server", ".env") });
 
 const DEMO_URL = "http://localhost:4000";
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
@@ -106,6 +107,11 @@ export async function loginAction(opts: any) {
     const serverUrl = options.serverUrl || DEMO_URL;
     const clientId = options.clientId || CLIENT_ID;
 
+    if (!clientId) {
+        cancel("Error: GITHUB_CLIENT_ID is not configured in your environment or options.");
+        process.exit(1);
+    }
+
     intro(chalk.bold.cyan("Zenith CLI Login"));
 
     const existingToken = await getStoredToken();
@@ -121,106 +127,100 @@ export async function loginAction(opts: any) {
             cancel("Login cancelled");
             process.exit(0);
         }
+    }
 
-        const authClient = createAuthClient({
-            baseURL: serverUrl,
-            plugins: [deviceAuthorizationClient()],
-        });
+    const authClient = createAuthClient({
+        baseURL: serverUrl,
+        plugins: [deviceAuthorizationClient()],
+    });
 
-        const spinner = yoctoSpinner({ text: "Requesting device authorization..." });
-        spinner.start();
-
-
-        try {
-            const { data, error } = await authClient.device.code({
-                client_id: "clientId",
-                scope: "openid profile email",
-            })
-
-            spinner.stop()
-            if (error || !data) {
-                logger.error(
-                    `Failed to request device authorization: ${error?.error_description || error?.statusText || "Unknown error"}`
-                )
-                process.exit(1);
-            }
-            const {
-                device_code,
-                user_code,
-                verification_uri,
-                verification_uri_complete,
-                interval = 5,
-                expires_in,
-            } = data;
-
-            console.log("");
-            console.log(chalk.cyan("Device Authorization is Required"));
-            console.log("");
-            console.log(
-                `Please visit: ${chalk.underline.blue(
-                    verification_uri_complete || verification_uri
-                )}`
-            );
-            console.log(`Enter code: ${chalk.bold.green(user_code)}`);
-            console.log("");
-
-            const shouldOpen = await confirm({
-                message: "Open browser automatically?",
-                initialValue: true,
-            });
-
-            if (!isCancel(shouldOpen) && shouldOpen) {
-                const urlToOpen = verification_uri_complete || verification_uri;
-                await open(urlToOpen);
-            }
-
-            console.log(
-                chalk.gray(
-                    `Waiting for authorization (expires in ${Math.floor(
-                        expires_in / 60
-                    )} minutes)...`
-                )
-            );
+    const spinner = yoctoSpinner({ text: "Requesting device authorization..." });
+    spinner.start();
 
 
-            const token = await pollForToken(
-                authClient,
-                device_code,
-                clientId,
-                interval
-            );
+    try {
+        const { data, error } = await authClient.device.code({
+            client_id: clientId as string,
+            scope: "openid profile email",
+        })
 
-            if(token){
-                const save = await storeToken(token);
-
-                if(!save){
-                    console.log(chalk.yellow("Warning: Token could not be stored. You'll need to provide it manually when needed."))
-                    console.log(chalk.gray("Token"))
-                    console.log(chalk.cyan("you may need authentication again soon"))
-                } else{
-                    console.log(chalk.green("✅ Authentication Successful!"))
-                }
-            }
-             
-            /* Todo Get User Data */
-
-            outro(chalk.green("User Login Successfully"))
-            console.log(chalk.cyan(`Token Saved to ${TOKEN_FILE}`));
-
-            console.log(chalk.gray("You are all set to use Zenith AI"))
-            console.log(chalk.blue("run - zenith ai --help"))
-            
-        } catch (error: any) {
-            spinner.stop()
-            logger.error("Error during login:", error.message);
+        spinner.stop()
+        if (error || !data) {
+            logger.error(
+                `Failed to request device authorization: ${error?.error_description || error?.statusText || "Unknown error"}`
+            )
             process.exit(1);
         }
+        const {
+            device_code,
+            user_code,
+            verification_uri,
+            verification_uri_complete,
+            interval = 5,
+            expires_in,
+        } = data;
+
+        console.log("");
+        console.log(chalk.cyan("Device Authorization is Required"));
+        console.log("");
+        console.log(
+            `Please visit: ${chalk.underline.blue(
+                verification_uri_complete || verification_uri
+            )}`
+        );
+        console.log(`Enter code: ${chalk.bold.green(user_code)}`);
+        console.log("");
+
+        const shouldOpen = await confirm({
+            message: "Open browser automatically?",
+            initialValue: true,
+        });
+
+        if (!isCancel(shouldOpen) && shouldOpen) {
+            const urlToOpen = verification_uri_complete || verification_uri;
+            await open(urlToOpen);
+        }
+
+        console.log(
+            chalk.gray(
+                `Waiting for authorization (expires in ${Math.floor(
+                    expires_in / 60
+                )} minutes)...`
+            )
+        );
 
 
+        const token = await pollForToken(
+            authClient,
+            device_code,
+            clientId,
+            interval
+        );
 
+        if(token){
+            const save = await storeToken(token);
 
+            if(!save){
+                console.log(chalk.yellow("Warning: Token could not be stored. You'll need to provide it manually when needed."))
+                console.log(chalk.gray("Token"))
+                console.log(chalk.cyan("you may need authentication again soon"))
+            } else{
+                console.log(chalk.green("✅ Authentication Successful!"))
+            }
+        }
+         
+        /* Todo Get User Data */
 
+        outro(chalk.green("User Login Successfully"))
+        console.log(chalk.cyan(`Token Saved to ${TOKEN_FILE}`));
 
+        console.log(chalk.gray("You are all set to use Zenith AI"))
+        console.log(chalk.blue("run - zenith ai --help"))
+        
+    } catch (error: any) {
+        spinner.stop()
+        logger.error("Error during login:", error.message);
+        process.exit(1);
     }
 }
 

@@ -31,10 +31,10 @@ export function createApp(): Application {
     return res.json(session);
   });
 
-  app.get('/', async (_req: Request, res: Response) => {
-    const {user_code } =  _req.body
-    res.redirect(`http://localhost:3000/device/user_code=${user_code}`) 
-  })
+  app.get('/device', async (req: Request, res: Response) => {
+    const user_code = req.query.user_code || "";
+    res.redirect(`http://localhost:3000/device?user_code=${user_code}`);
+  });
 
   return app;
 }
