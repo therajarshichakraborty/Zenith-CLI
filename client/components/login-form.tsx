@@ -6,6 +6,9 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const onLogin = async () => {
