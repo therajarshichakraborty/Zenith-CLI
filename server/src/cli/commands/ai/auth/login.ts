@@ -11,7 +11,7 @@ import path from "node:path";
 import yoctoSpinner from "yocto-spinner";
 import * as z from "zod";
 import dotenv from "dotenv";
-//import prisma from "../../../../lib/db.ts"
+import prisma from "../../../../lib/db";
 
 dotenv.config();
 dotenv.config({ path: path.join(process.cwd(), "server", ".env") });
@@ -32,7 +32,7 @@ export async function getStoredToken() {
   }
 }
 
-export async function storeToken(token:any) {
+export async function storeToken(token: any) {
   try {
     await fs.mkdir(CONFIG_DIR, { recursive: true });
 
@@ -41,15 +41,13 @@ export async function storeToken(token:any) {
       refresh_token: token.refresh_token,
       token_type: token.token_type || "Bearer",
       scope: token.scope,
-      expires_at: token.expires_in
-        ? new Date(Date.now() + token.expires_in * 1000).toISOString()
-        : null,
+      expires_at: token.expires_in ? new Date(Date.now() + token.expires_in * 1000).toISOString() : null,
       created_at: new Date().toISOString(),
     };
 
     await fs.writeFile(TOKEN_FILE, JSON.stringify(tokenData, null, 2), "utf-8");
     return true;
-  } catch (error:any) {
+  } catch (error: any) {
     console.error(chalk.red("Failed to store token:"), error.message);
     return false;
   }
@@ -79,16 +77,12 @@ export async function requireAuth() {
   const token = await getStoredToken();
 
   if (!token) {
-    console.log(
-      chalk.red("❌ Not authenticated. Please run 'your-cli login' first.")
-    );
+    console.log(chalk.red("❌ Not authenticated. Please run 'your-cli login' first."));
     process.exit(1);
   }
 
   if (await isTokenExpired()) {
-    console.log(
-      chalk.yellow("⚠️  Your session has expired. Please login again.")
-    );
+    console.log(chalk.yellow("⚠️  Your session has expired. Please login again."));
     console.log(chalk.gray("   Run: your-cli login\n"));
     process.exit(1);
   }
@@ -97,134 +91,111 @@ export async function requireAuth() {
 }
 
 export async function loginAction(opts: any) {
-    const options = z
-        .object({
-            serverUrl: z.string().optional(),
-            clientId: z.string().optional(),
-        })
-        .parse(opts);
+  const options = z
+    .object({
+      serverUrl: z.string().optional(),
+      clientId: z.string().optional(),
+    })
+    .parse(opts);
 
-    const serverUrl = options.serverUrl || DEMO_URL;
-    const clientId = options.clientId || CLIENT_ID;
+  const serverUrl = options.serverUrl || DEMO_URL;
+  const clientId = options.clientId || CLIENT_ID;
 
-    if (!clientId) {
-        cancel("Error: GITHUB_CLIENT_ID is not configured in your environment or options.");
-        process.exit(1);
-    }
+  if (!clientId) {
+    cancel("Error: GITHUB_CLIENT_ID is not configured in your environment or options.");
+    process.exit(1);
+  }
 
-    intro(chalk.bold.cyan("Zenith CLI Login"));
+  intro(chalk.bold.cyan("Zenith CLI Login"));
 
-    const existingToken = await getStoredToken();
-    const expired = await isTokenExpired();
+  const existingToken = await getStoredToken();
+  const expired = await isTokenExpired();
 
-    if (existingToken && !expired) {
-        const shouldReauth = await confirm({
-            message: "You're already logged in. Do you want to log in again?",
-            initialValue: false,
-        });
-
-        if (isCancel(shouldReauth) || !shouldReauth) {
-            cancel("Login cancelled");
-            process.exit(0);
-        }
-    }
-
-    const authClient = createAuthClient({
-        baseURL: serverUrl,
-        plugins: [deviceAuthorizationClient()],
+  if (existingToken && !expired) {
+    const shouldReauth = await confirm({
+      message: "You're already logged in. Do you want to log in again?",
+      initialValue: false,
     });
 
-    const spinner = yoctoSpinner({ text: "Requesting device authorization..." });
-    spinner.start();
-
-
-    try {
-        const { data, error } = await authClient.device.code({
-            client_id: clientId as string,
-            scope: "openid profile email",
-        })
-
-        spinner.stop()
-        if (error || !data) {
-            logger.error(
-                `Failed to request device authorization: ${error?.error_description || error?.statusText || "Unknown error"}`
-            )
-            process.exit(1);
-        }
-        const {
-            device_code,
-            user_code,
-            verification_uri,
-            verification_uri_complete,
-            interval = 5,
-            expires_in,
-        } = data;
-
-        console.log("");
-        console.log(chalk.cyan("Device Authorization is Required"));
-        console.log("");
-        console.log(
-            `Please visit: ${chalk.underline.blue(
-                verification_uri_complete || verification_uri
-            )}`
-        );
-        console.log(`Enter code: ${chalk.bold.green(user_code)}`);
-        console.log("");
-
-        const shouldOpen = await confirm({
-            message: "Open browser automatically?",
-            initialValue: true,
-        });
-
-        if (!isCancel(shouldOpen) && shouldOpen) {
-            const urlToOpen = verification_uri_complete || verification_uri;
-            await open(urlToOpen);
-        }
-
-        console.log(
-            chalk.gray(
-                `Waiting for authorization (expires in ${Math.floor(
-                    expires_in / 60
-                )} minutes)...`
-            )
-        );
-
-
-        const token = await pollForToken(
-            authClient,
-            device_code,
-            clientId,
-            interval
-        );
-
-        if(token){
-            const save = await storeToken(token);
-
-            if(!save){
-                console.log(chalk.yellow("Warning: Token could not be stored. You'll need to provide it manually when needed."))
-                console.log(chalk.gray("Token"))
-                console.log(chalk.cyan("you may need authentication again soon"))
-            } else{
-                console.log(chalk.green("✅ Authentication Successful!"))
-            }
-        }
-         
-        /* Todo Get User Data */
-
-        outro(chalk.green("User Login Successfully"))
-        console.log(chalk.cyan(`Token Saved to ${TOKEN_FILE}`));
-
-        console.log(chalk.gray("You are all set to use Zenith AI"))
-        console.log(chalk.blue("run - zenith ai --help"))
-        
-    } catch (error: any) {
-        spinner.stop()
-        logger.error("Error during login:", error.message);
-        process.exit(1);
+    if (isCancel(shouldReauth) || !shouldReauth) {
+      cancel("Login cancelled");
+      process.exit(0);
     }
+  }
+
+  const authClient = createAuthClient({
+    baseURL: serverUrl,
+    plugins: [deviceAuthorizationClient()],
+  });
+
+  const spinner = yoctoSpinner({ text: "Requesting device authorization..." });
+  spinner.start();
+
+  try {
+    const { data, error } = await authClient.device.code({
+      client_id: clientId as string,
+      scope: "openid profile email",
+    });
+
+    spinner.stop();
+    if (error || !data) {
+      logger.error(
+        `Failed to request device authorization: ${error?.error_description || error?.statusText || "Unknown error"}`
+      );
+      process.exit(1);
+    }
+    const { device_code, user_code, verification_uri, verification_uri_complete, interval = 5, expires_in } = data;
+
+    console.log("");
+    console.log(chalk.cyan("Device Authorization is Required"));
+    console.log("");
+    console.log(`Please visit: ${chalk.underline.blue(verification_uri_complete || verification_uri)}`);
+    console.log(`Enter code: ${chalk.bold.green(user_code)}`);
+    console.log("");
+
+    const shouldOpen = await confirm({
+      message: "Open browser automatically?",
+      initialValue: true,
+    });
+
+    if (!isCancel(shouldOpen) && shouldOpen) {
+      const urlToOpen = verification_uri_complete || verification_uri;
+      await open(urlToOpen);
+    }
+
+    console.log(chalk.gray(`Waiting for authorization (expires in ${Math.floor(expires_in / 60)} minutes)...`));
+
+    const token = await pollForToken(authClient, device_code, clientId, interval);
+
+    if (token) {
+      const save = await storeToken(token);
+
+      if (!save) {
+        console.log(
+          chalk.yellow("Warning: Token could not be stored. You'll need to provide it manually when needed.")
+        );
+        console.log(chalk.gray("Token"));
+        console.log(chalk.cyan("you may need authentication again soon"));
+      } else {
+        console.log(chalk.green("✅ Authentication Successful!"));
+      }
+    }
+
+    /* Todo Get User Data */
+
+    outro(chalk.green("User Login Successfully"));
+    console.log(chalk.cyan(`Token Saved to ${TOKEN_FILE}`));
+
+    console.log(chalk.gray("You are all set to use Zenith AI"));
+    console.log(chalk.blue("run - zenith ai --help"));
+  } catch (error: any) {
+    spinner.stop();
+    logger.error("Error during login:", error.message);
+    process.exit(1);
+  }
 }
 
-async function pollForToken(authClient : any, deviceCode : any, clientId : any, initialInterval : any) {
+async function pollForToken(authClient: any, deviceCode: any, clientId: any, initialInterval: any) {
   let pollingInterval = initialInterval;
   const spinner = yoctoSpinner({ text: "", color: "cyan" });
   let dots = 0;
@@ -232,9 +203,7 @@ async function pollForToken(authClient : any, deviceCode : any, clientId : any, 
   return new Promise((resolve, _) => {
     const poll = async () => {
       dots = (dots + 1) % 4;
-      spinner.text = chalk.gray(
-        `Polling for authorization${".".repeat(dots)}${" ".repeat(3 - dots)}`
-      );
+      spinner.text = chalk.gray(`Polling for authorization${".".repeat(dots)}${" ".repeat(3 - dots)}`);
       if (!spinner.isSpinning) spinner.start();
 
       try {
@@ -250,9 +219,7 @@ async function pollForToken(authClient : any, deviceCode : any, clientId : any, 
         });
 
         if (data?.access_token) {
-          console.log(
-            chalk.bold.yellow(`Your access token: ${data.access_token}`)
-          );
+          console.log(chalk.bold.yellow(`Your access token: ${data.access_token}`));
           spinner.stop();
           resolve(data);
           return;
@@ -277,7 +244,7 @@ async function pollForToken(authClient : any, deviceCode : any, clientId : any, 
               process.exit(1);
           }
         }
-      } catch (error : any) {
+      } catch (error: any) {
         spinner.stop();
         logger.error(`Network error: ${error.message}`);
         process.exit(1);
@@ -290,10 +257,81 @@ async function pollForToken(authClient : any, deviceCode : any, clientId : any, 
   });
 }
 
+export async function logoutAction() {
+  intro(chalk.bold("👋 Logout"));
+
+  const token = await getStoredToken();
+
+  if (!token) {
+    console.log(chalk.yellow("You're not logged in."));
+    process.exit(0);
+  }
+
+  const shouldLogout = await confirm({
+    message: "Are you sure you want to logout?",
+    initialValue: false,
+  });
+
+  if (isCancel(shouldLogout) || !shouldLogout) {
+    cancel("Logout cancelled");
+    process.exit(0);
+  }
+
+  const cleared = await clearStoredToken();
+
+  if (cleared) {
+    outro(chalk.green("✅ Successfully logged out!"));
+  } else {
+    console.log(chalk.yellow("⚠️  Could not clear token file."));
+  }
+}
+
+export async function whoamiAction(opts: any) {
+  const token = await requireAuth();
+  if (!token?.access_token) {
+    console.log("No access token found. Please login.");
+    process.exit(1);
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      sessions: {
+        some: {
+          token: token.access_token,
+        },
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+    },
+  });
+
+  if (!user) {
+    console.log(chalk.red("❌ Session not found in database. Please login again."));
+    process.exit(1);
+  }
+
+  console.log("");
+  console.log(chalk.cyan("Logged in to Zenith CLI as:"));
+  console.log(`👤 Name:  ${chalk.bold(user.name || "N/A")}`);
+  console.log(`✉️ Email: ${chalk.bold(user.email)}`);
+  console.log("");
+}
+
 /* Commander Setup */
 
 export const login = new Command("login")
-    .description("Please Login to Zenith CLI")
-    .option("--server-url <url>", "The Zenith CLI server URL", DEMO_URL)
-    .option("--client-id <id>", "The OAuth client ID", CLIENT_ID)
-    .action(loginAction);
+  .description("Please Login to Zenith CLI")
+  .option("--server-url <url>", "The Zenith CLI server URL", DEMO_URL)
+  .option("--client-id <id>", "The OAuth client ID", CLIENT_ID)
+  .action(loginAction);
+
+export const logout = new Command("logout").description("Logout and clear stored credentials").action(logoutAction);
+
+export const whoami = new Command("whoami")
+  .description("Show current authenticated user")
+  .option("--server-url <url>", "The Better Auth server URL", DEMO_URL)
+  .action(whoamiAction);

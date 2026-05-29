@@ -13,9 +13,7 @@ export default function HomePage() {
   const router = useRouter();
 
   const { data, isPending } = authClient.useSession();
-  {
-    console.log(data);
-  }
+
   useEffect(() => {
     if (!isPending && (!data?.session || !data?.user)) {
       router.push("/sign-in");
@@ -27,7 +25,6 @@ export default function HomePage() {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Spinner />
-
           <p className="animate-pulse text-sm text-muted-foreground">Loading your workspace...</p>
         </div>
       </div>
@@ -40,38 +37,27 @@ export default function HomePage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background px-6 text-foreground ml-50 mr-50">
-      {/* BACKGROUND */}
       <div className="absolute inset-0 bg-background,radial-gradient(circle_at_bottom_right,rgba(6,182,212,0.08),transparent_30%)]" />
-
       <div className="absolute left-[-120px] top-[-120px] h-[320px] w-[320px] rounded-full bg-background blur-3xl" />
-
       <div className="absolute bottom-[-120px] right-[-120px] h-[320px] w-[320px] rounded-full bg-background blur-3xl" />
-
-      {/* CONTENT */}
       <div className="relative z-10 flex min-h-screen items-center justify-center">
         <div className="w-full max-w-7xl">
           <div className="grid items-center gap-20 lg:grid-cols-2">
-            {/* LEFT SIDE */}
             <div>
               <div className="mb-8 flex items-center gap-4">
                 <p className="bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-500 bg-clip-text text-sm font-semibold tracking-[0.35em] text-transparent">
                   ZenithCLI Dashboard
                 </p>
               </div>
-
               <h1 className="bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-500 bg-clip-text text-7xl font-black tracking-tight text-transparent md:text-8xl">
                 Welcome
               </h1>
-
               <h2 className="mt-4 max-w-2xl text-4xl font-bold tracking-tight md:text-6xl">{data.user.name}</h2>
-
               <div className="mt-8 h-[4px] w-56 rounded-full bg-gradient-to-r from-emerald-400 via-cyan-500 to-blue-500" />
-
               <p className="mt-10 max-w-2xl text-lg leading-relaxed text-muted-foreground">
                 Your intelligent terminal-first workspace is ready. Manage authentication, automate workflows, and
                 enhance developer productivity with a modern AI-powered experience.
               </p>
-
               <div className="mt-10 flex flex-wrap items-center gap-4 text-sm font-medium text-muted-foreground">
                 <span>Build</span>
                 <span className="text-emerald-500">•</span>
@@ -81,8 +67,6 @@ export default function HomePage() {
                 <span className="text-blue-500">•</span>
                 <span>Scale</span>
               </div>
-
-              {/* BUTTONS */}
               <div className="mt-12 flex flex-wrap gap-4">
                 <Button
                   variant="outline"
@@ -100,7 +84,6 @@ export default function HomePage() {
                 </Button>
               </div>
             </div>
-
             <ProfileCard data={data} />
           </div>
         </div>

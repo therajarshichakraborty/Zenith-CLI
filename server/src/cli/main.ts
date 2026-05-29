@@ -6,7 +6,7 @@ dotenv.config();
 import chalk from "chalk";
 import figlet from "figlet";
 import { Command } from "commander";
-import { login } from "./commands/ai/auth/login";
+import { login, logout, whoami } from "./commands/ai/auth/login";
 
 const VERSION = "0.1.0";
 
@@ -64,6 +64,9 @@ export async function main(): Promise<void> {
     });
 
   program.addCommand(login);
+  program.addCommand(logout);
+  program.addCommand(whoami);
+
   program.parse(process.argv);
 }
 

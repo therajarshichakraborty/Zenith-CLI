@@ -34,11 +34,13 @@ const PageContent = () => {
 
 const Page = () => {
   return (
-    <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Spinner />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <Spinner />
+        </div>
+      }
+    >
       <PageContent />
     </Suspense>
   );
