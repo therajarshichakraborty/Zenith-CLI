@@ -11,7 +11,7 @@ import path from "node:path";
 import yoctoSpinner from "yocto-spinner";
 import * as z from "zod";
 import dotenv from "dotenv";
-import prisma from "../../../../lib/db";
+import prisma from "../../../lib/db";
 
 dotenv.config();
 dotenv.config({ path: path.join(process.cwd(), "server", ".env") });
