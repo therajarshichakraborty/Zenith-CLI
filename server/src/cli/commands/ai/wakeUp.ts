@@ -4,46 +4,44 @@ import yoctoSpinner from "yocto-spinner";
 import { getStoredToken } from "../auth/login.js";
 import prisma from "../../../lib/db.js";
 import { select } from "@clack/prompts";
-// import { startChat } from "../../chat/chat-with-ai.js";
+import { startChat } from "../../chats/chatWithAI.js";
 // import { startToolChat } from "../../chat/chat-with-ai-tool.js";
 // import { startAgentChat } from "../../chat/chat-with-ai-agent.js";
 
-
 const wakeUpAction = async () => {
-    const token = await getStoredToken();
+  const token = await getStoredToken();
 
-    if (!token?.access_token) {
-        console.log(chalk.red("Not authenticated. Please login."));
-        return;
-    }
+  if (!token?.access_token) {
+    console.log(chalk.red("Not authenticated. Please login."));
+    return;
+  }
 
-    const spinner = yoctoSpinner({ text: "Fetching User Information..." });
-    spinner.start();
-      const user = await prisma.user.findFirst({
-        where: {
-            sessions: {
-                some: { token: token.access_token },
-            },
-        },
-        select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-        },
-    })
+  const spinner = yoctoSpinner({ text: "Fetching User Information..." });
+  spinner.start();
+  const user = await prisma.user.findFirst({
+    where: {
+      sessions: {
+        some: { token: token.access_token },
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+    },
+  });
 
-    if (!user) {
-        console.log(chalk.red("Not authenticated. Please login."));
-        return;
-    }
+  if (!user) {
+    console.log(chalk.red("Not authenticated. Please login."));
+    return;
+  }
 
-    spinner.stop();
-    console.log(chalk.green("User information fetched successfully!"));
-    console.log(chalk.blue(`Welcome, ${user.name}!`));
+  spinner.stop();
+  console.log(chalk.green("User information fetched successfully!"));
+  console.log(chalk.blue(`Welcome, ${user.name}!`));
 
-
-    const choice = await select({
+  const choice = await select({
     message: "Select an option:",
     options: [
       {
@@ -64,24 +62,20 @@ const wakeUpAction = async () => {
     ],
   });
 
-
-    switch (choice) {
+  switch (choice) {
     case "chat":
-        console.log(chalk.blue("Starting chat..."));
-    //   await startChat("chat");
+      console.log(chalk.blue("Starting chat..."));
+      await startChat("chat");
       break;
     case "tool":
-        console.log(chalk.blue("Starting tool chat..."));
-    //   await startToolChat();
+      console.log(chalk.blue("Starting tool chat..."));
+      //   await startToolChat();
       break;
     case "agent":
-        console.log(chalk.blue("Starting agentic mode..."));
-    //   await startAgentChat();   
+      console.log(chalk.blue("Starting agentic mode..."));
+      //   await startAgentChat();
       break;
   }
 };
 
-
-export const wakeUp = new Command("wakeup")
-  .description("Wake up the AI")
-  .action(wakeUpAction);
+export const wakeUp = new Command("wakeup").description("Wake up the AI").action(wakeUpAction);

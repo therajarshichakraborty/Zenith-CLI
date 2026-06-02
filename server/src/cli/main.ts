@@ -55,19 +55,12 @@ export async function main(): Promise<void> {
     .name("zenith")
     .version(VERSION)
     .description("Zenith CLI - The developer toolkit that gets out of your way.")
-    .action(() => {
-      // printBanner();
-      // console.log(chalk.cyan("Usage:"));
-      // console.log(`  $ zenith ${chalk.dim("<command> [options]")}\n`);
-      // console.log(chalk.cyan("Commands:"));
-      // console.log(`  ${chalk.bold("login")}       Authenticate with your Zenith account\n`);
-      // console.log(`Run ${chalk.bold("zenith --help")} to see all available options and commands.\n`);
-    });
+    .action(() => {});
 
   program.addCommand(login);
   program.addCommand(logout);
   program.addCommand(whoami);
-  program.addCommand(wakeUp)
+  program.addCommand(wakeUp);
 
   program.parse(process.argv);
 }
