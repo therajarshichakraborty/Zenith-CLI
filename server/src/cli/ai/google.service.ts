@@ -37,7 +37,16 @@ export class GoogleAiService {
         messages: messages,
         temperature: googleConfig.temperature,
         maxTokens: googleConfig.maxTokens,
+        // tools:tools,
+        // maxSteps:5,
       };
+
+      if (tools && Object.keys(tools).length > 0) {
+        (streamConfig as any).tools = tools;
+        (streamConfig as any).maxSteps = 5;
+
+        console.log(chalk.gray(`[DEBUG] Tools enabled: ${Object.keys(tools).join(", ")}`));
+      }
 
       const result = streamText(streamConfig);
 
@@ -51,6 +60,27 @@ export class GoogleAiService {
       }
 
       const fullResult = result;
+
+      const toolCalls = [];
+      const toolResults = [];
+
+      if (fullResult.steps && Array.isArray(fullResult.steps)) {
+        for (const step of fullResult.steps) {
+          if (step.toolCalls && step.toolCalls.length > 0) {
+            for (const toolCall of step.toolCalls) {
+              toolCalls.push(toolCall);
+              if (onToolCall) {
+                onToolCall(toolCall);
+              }
+            }
+          }
+
+          if (step.toolResults && step.toolResults.length > 0) {
+            toolResults.push(...step.toolResults);
+          }
+        }
+      }
+
       return {
         content: fullResponse,
         finishReason: fullResult.finishReason,

@@ -4,61 +4,71 @@ import yoctoSpinner from "yocto-spinner";
 import { marked } from "marked";
 import { markedTerminal } from "marked-terminal";
 import { GoogleAiService } from "../ai/google.service";
-import { ChatService } from "../../service/char.service";
+import { ChatService } from "../../service/chat.service";
 import { getStoredToken } from "../commands/auth/login";
 import prisma from "../../lib/db";
 
-const W       = Math.min(process.stdout.columns || 80, 96);
-const PAD     = "  ";
-const hr      = (ch = "─") => chalk.dim(ch.repeat(W));
-const hrBold  = ()          => chalk.hex("#3F3F46")("─".repeat(W));
+const W = Math.min(process.stdout.columns || 80, 96);
+const PAD = "  ";
+const hr = (ch = "─") => chalk.dim(ch.repeat(W));
+const hrBold = () => chalk.hex("#3F3F46")("─".repeat(W));
 
 const C = {
-  purple:    chalk.hex("#A78BFA"),   // primary brand
-  violet:    chalk.hex("#7C3AED"),
-  green:     chalk.hex("#34D399"),   // AI response / success
-  blue:      chalk.hex("#60A5FA"),   // user / info
-  amber:     chalk.hex("#FCD34D"),   // warn / highlight
-  sky:       chalk.hex("#7DD3FC"),   // code
-  dim:       chalk.dim,
-  white:     chalk.white,
-  muted:     chalk.hex("#71717A"),   // zinc-500
-  error:     chalk.hex("#F87171"),   // red-400
+  purple: chalk.hex("#A78BFA"),
+  violet: chalk.hex("#7C3AED"),
+  green: chalk.hex("#34D399"),
+  blue: chalk.hex("#60A5FA"),
+  amber: chalk.hex("#FCD34D"),
+  sky: chalk.hex("#7DD3FC"),
+  dim: chalk.dim,
+  white: chalk.white,
+  muted: chalk.hex("#71717A"),
+  error: chalk.hex("#F87171"),
 };
 
 marked.use(
   markedTerminal({
-    code:         C.sky,
-    blockquote:   C.muted.italic,
-    heading:      C.purple.bold,
+    code: C.sky,
+    blockquote: C.muted.italic,
+    heading: C.purple.bold,
     firstHeading: C.purple.bold,
-    hr:           C.muted,
-    listitem:     C.white,
-    list:         C.white,
-    paragraph:    C.white,
-    strong:       chalk.bold.white,
-    em:           chalk.italic,
-    codespan:     C.amber.bgHex("#1C1917"),
-    del:          C.muted.strikethrough,
-    link:         C.sky.underline,
-    href:         C.sky.underline,
+    hr: C.muted,
+    listitem: C.white,
+    list: C.white,
+    paragraph: C.white,
+    strong: chalk.bold.white,
+    em: chalk.italic,
+    codespan: C.amber.bgHex("#1C1917"),
+    del: C.muted.strikethrough,
+    link: C.sky.underline,
+    href: C.sky.underline,
   }) as any
 );
 
-const aiService   = new GoogleAiService();
+const aiService = new GoogleAiService();
 const chatService = new ChatService();
 
-function print(s = "")  { console.log(s); }
-function gap()          { print(); }
-function rule()         { print(hr()); }
-function boldRule()     { print(hrBold()); }
+function print(s = "") {
+  console.log(s);
+}
+function gap() {
+  print();
+}
+function rule() {
+  print(hr());
+}
+function boldRule() {
+  print(hrBold());
+}
 function label(icon: string, color: typeof C.purple, text: string) {
   return `${PAD}${color.bold(icon)}  ${C.muted(text)}`;
 }
 
-// Indent every line of a multi-line string
 function indent(s: string, pad = PAD) {
-  return s.split("\n").map((l) => pad + l).join("\n");
+  return s
+    .split("\n")
+    .map((l) => pad + l)
+    .join("\n");
 }
 
 async function getUserFromToken() {
@@ -78,9 +88,7 @@ async function getUserFromToken() {
     throw new Error("User not found. Please login again.");
   }
 
-  spinner.success(
-    C.green("✓") + "  " + C.white.bold(user.name || "User") + C.muted("  authenticated")
-  );
+  spinner.success(C.green("✓") + "  " + C.white.bold(user.name || "User") + C.muted("  authenticated"));
   return user;
 }
 
@@ -118,7 +126,7 @@ async function getAIResponse(conversationId: string) {
   }).start();
 
   const dbMessages = await chatService.getMessages(conversationId);
-  const aiMessages  = chatService.formatMessagesForAI(dbMessages);
+  const aiMessages = chatService.formatMessagesForAI(dbMessages);
 
   let fullResponse = "";
 
@@ -130,14 +138,11 @@ async function getAIResponse(conversationId: string) {
     spinner.stop();
 
     gap();
-    print(
-      `${PAD}${C.green.bold("◆ Zenith")}` +
-      `  ${C.muted("─".repeat(W - 12))}`
-    );
+    print(`${PAD}${C.green.bold("◆ Zenith")}` + `  ${C.muted("─".repeat(W - 12))}`);
     gap();
 
     const rendered = marked.parse(fullResponse) as string;
-    const trimmed  = rendered.trimEnd();
+    const trimmed = rendered.trimEnd();
 
     print(indent(trimmed, PAD));
 
@@ -159,14 +164,14 @@ export async function startChat(mode: string = "chat", conversationId: string | 
     gap();
     print(
       `${PAD}${C.purple.bold("◆  Z E N I T H")}` +
-      `  ${C.muted("·")}  ${C.muted("AI Chat")}` +
-      `  ${C.muted("·")}  ${C.muted("v0.1.0")}`
+        `  ${C.muted("·")}  ${C.muted("AI Chat")}` +
+        `  ${C.muted("·")}  ${C.muted("v0.1.0")}`
     );
     gap();
     print(hr("═"));
     gap();
 
-    const user         = await getUserFromToken();
+    const user = await getUserFromToken();
     const conversation = await initConvo(user.id, conversationId, mode);
     await chatLoop(conversation);
 
@@ -185,18 +190,12 @@ export async function startChat(mode: string = "chat", conversationId: string | 
 function displayMessages(messages: { role: string; content: string }[]) {
   messages.forEach((msg, i) => {
     if (msg.role === "user") {
-      print(
-        `${PAD}${C.blue.bold("you")}` +
-        `  ${C.muted("─".repeat(W - 7))}`
-      );
+      print(`${PAD}${C.blue.bold("you")}` + `  ${C.muted("─".repeat(W - 7))}`);
       gap();
       print(indent(C.white(msg.content)));
       gap();
     } else {
-      print(
-        `${PAD}${C.green.bold("◆ Zenith")}` +
-        `  ${C.muted("─".repeat(W - 12))}`
-      );
+      print(`${PAD}${C.green.bold("◆ Zenith")}` + `  ${C.muted("─".repeat(W - 12))}`);
       gap();
       const rendered = marked.parse(msg.content) as string;
       print(indent(rendered.trimEnd()));
@@ -224,7 +223,6 @@ async function chatLoop(conversation: Awaited<ReturnType<typeof chatService.getO
   );
   gap();
 
-  // Start turn count from existing message count so title isn't re-set on resumed conversations
   let turnCount = conversation.messages?.length ?? 0;
 
   while (true) {
