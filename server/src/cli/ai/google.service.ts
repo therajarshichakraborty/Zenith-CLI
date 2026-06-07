@@ -2,6 +2,7 @@ import { google } from "@ai-sdk/google";
 import { streamText } from "ai";
 import { googleConfig } from "../../config/google.config";
 import chalk from "chalk";
+import { generateObject } from "ai";
 
 export class GoogleAiService {
   private model: any;
@@ -103,5 +104,27 @@ export class GoogleAiService {
   async getMessage(messages: any[], tools: any = undefined): Promise<string> {
     const result = await this.sendMessage(messages, () => {}, tools);
     return result.content;
+  }
+
+  /**
+   * generate a structured output in docs
+   * @param {Object} tools - Optional tools
+   * @param {Function} onToolCall - Callback for tool calls
+   * @returns {Promise<Object>} Full response with content, tool calls, and usage
+   */
+
+  async generateStructured(schema: any, prompt: string) {
+    try {
+      const result = await generateObject({
+        model: this.model,
+        schema: schema,
+        prompt: prompt,
+      });
+
+      return result.object;
+    } catch (error: any) {
+      console.error(chalk.red("AI Structured Generation Error:"), error.message);
+      throw error;
+    }
   }
 }
