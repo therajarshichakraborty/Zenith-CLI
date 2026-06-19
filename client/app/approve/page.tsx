@@ -19,10 +19,13 @@ function DeviceApprovalContent() {
   });
 
   useEffect(() => {
-    if (!data?.session && !data?.user) {
-      router.replace("/sign-in");
+    if (!isPending && !data?.session && !data?.user) {
+      const redirectUrl = userCode
+        ? `/sign-in?callbackUrl=${encodeURIComponent(`/approve?user_code=${userCode}`)}`
+        : "/sign-in";
+      router.replace(redirectUrl);
     }
-  }, [data, router]);
+  }, [data, isPending, router, userCode]);
 
   if (isPending) {
     return (

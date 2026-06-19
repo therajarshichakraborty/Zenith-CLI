@@ -3,7 +3,7 @@
 import { authClient } from "@/lib/auth-client";
 import type React from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ShieldAlert, Terminal, Loader2, ShieldCheck } from "lucide-react";
 
 export default function DeviceAuthorizationPage() {
@@ -11,6 +11,20 @@ export default function DeviceAuthorizationPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("user_code");
+      if (code) {
+        let value = code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        if (value.length > 4) {
+          value = value.slice(0, 4) + "-" + value.slice(4, 8);
+        }
+        setUserCode(value);
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

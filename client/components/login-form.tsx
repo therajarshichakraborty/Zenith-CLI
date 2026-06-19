@@ -9,14 +9,15 @@ import { authClient } from "@/lib/auth-client";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
-export function LoginForm() {
+export function LoginForm({ callbackUrl = "/" }: { callbackUrl?: string }) {
   const [isLoading, setIsLoading] = useState(false);
   const onLogin = async () => {
     try {
       setIsLoading(true);
+      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
       await authClient.signIn.social({
         provider: "github",
-        callbackURL: "http://localhost:3000",
+        callbackURL: `${origin}${callbackUrl}`,
       });
     } finally {
       setIsLoading(false);

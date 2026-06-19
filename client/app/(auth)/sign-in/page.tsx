@@ -27,7 +27,7 @@ const PageContent = () => {
 
   return (
     <div>
-      <LoginForm />
+      <LoginForm callbackUrl={callbackUrl} />
     </div>
   );
 };
