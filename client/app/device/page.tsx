@@ -3,15 +3,19 @@
 import { authClient } from "@/lib/auth-client";
 import type React from "react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ShieldAlert, Terminal, Loader2, ShieldCheck } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function DeviceAuthorizationPage() {
   const [userCode, setUserCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { data: session, isPending } = authClient.useSession();
+  const autoSubmittedRef = useRef(false);
 
+  // Parse user_code from URL
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -26,25 +30,50 @@ export default function DeviceAuthorizationPage() {
     }
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // If not logged in, redirect to sign-in first (with callback back here)
+  useEffect(() => {
+    if (!isPending && !session?.session) {
+      const currentUrl = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/device";
+      router.replace(`/sign-in?callbackUrl=${encodeURIComponent(currentUrl)}`);
+    }
+  }, [isPending, session, router]);
+
+  // Auto-submit when user_code is pre-filled from URL and user is logged in
+  useEffect(() => {
+    if (!isPending && session?.session && userCode.length === 9 && !autoSubmittedRef.current) {
+      autoSubmittedRef.current = true;
+      handleVerify(userCode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPending, session, userCode]);
+
+  const handleVerify = async (code: string) => {
     setError(null);
     setIsLoading(true);
-
     try {
-      const formattedCode = userCode.trim().replace(/-/g, "").toUpperCase();
-      const response = await authClient.device({
+      const formattedCode = code.trim().replace(/-/g, "").toUpperCase();
+      const { data, error: apiError } = await authClient.device({
         query: { user_code: formattedCode },
       });
 
-      if (response.data) {
+      if (apiError) {
+        setError((apiError as any)?.error_description || "Invalid or expired code");
+        return;
+      }
+
+      if (data) {
         router.push(`/approve?user_code=${formattedCode}`);
       }
-    } catch (err) {
-      setError("Invalid or expired code");
+    } catch (err: any) {
+      setError(err?.message || "Invalid or expired code");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleVerify(userCode);
   };
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,6 +83,18 @@ export default function DeviceAuthorizationPage() {
     }
     setUserCode(value);
   };
+
+  // Show spinner while checking session or redirecting
+  if (isPending || !session?.session) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Spinner />
+          <p className="animate-pulse text-sm text-muted-foreground">Checking session...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-6 text-foreground">

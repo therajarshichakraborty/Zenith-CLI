@@ -42,12 +42,19 @@ function DeviceApprovalContent() {
     setIsProcessing({ approve: true, deny: false });
     try {
       toast.loading("Approving device...", { id: "loading" });
-      await authClient.device.approve({ userCode: userCode! });
+      const { error } = await authClient.device.approve({ userCode: userCode! });
       toast.dismiss("loading");
+      if (error) {
+        const msg = (error as any)?.error_description || (error as any)?.message || "Failed to approve device";
+        toast.error(msg);
+        setIsProcessing({ approve: false, deny: false });
+        return;
+      }
       toast.success("Device approved successfully!");
       router.push("/");
-    } catch {
-      toast.error("Failed to approve device");
+    } catch (err: any) {
+      toast.dismiss("loading");
+      toast.error(err?.message || "Failed to approve device");
     }
     setIsProcessing({ approve: false, deny: false });
   };
@@ -56,12 +63,19 @@ function DeviceApprovalContent() {
     setIsProcessing({ approve: false, deny: true });
     try {
       toast.loading("Denying device...", { id: "deny" });
-      await authClient.device.deny({ userCode: userCode! });
+      const { error } = await authClient.device.deny({ userCode: userCode! });
       toast.dismiss("deny");
+      if (error) {
+        const msg = (error as any)?.error_description || (error as any)?.message || "Failed to deny device";
+        toast.error(msg);
+        setIsProcessing({ approve: false, deny: false });
+        return;
+      }
       toast.success("Device denied.");
       router.push("/");
-    } catch {
-      toast.error("Failed to deny device");
+    } catch (err: any) {
+      toast.dismiss("deny");
+      toast.error(err?.message || "Failed to deny device");
     }
     setIsProcessing({ approve: false, deny: false });
   };
