@@ -15,6 +15,21 @@ export const auth = betterAuth({
   basePath: "/api/auth",
   trustedOrigins: [frontendUrl],
 
+  advanced: {
+    useSecureCookies: true,
+    crossSubdomainCookies: {
+      enabled: false,
+    },
+    cookies: {
+      state: {
+        attributes: {
+          sameSite: "none",
+          secure: true,
+        },
+      },
+    },
+  },
+
   plugins: [
     deviceAuthorization({
       verificationUri: "/device",
