@@ -1,6 +1,6 @@
 {
   "name": "@zenith-labs/cli",
-  "version": "1.0.4",
+  "version": "1.0.6",
   "description": "The next-generation terminal-first developer workspace powered by Gemini",
   "type": "module",
   "main": "./dist/zenith.js",

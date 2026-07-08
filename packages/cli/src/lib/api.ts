@@ -2,7 +2,7 @@ import { getStoredToken } from "../commands/auth/login.js";
 
 export async function apiRequest(path: string, options: RequestInit = {}) {
   const token = await getStoredToken();
-  const serverUrl = token?.serverUrl || "http://localhost:4000";
+  const serverUrl = token?.serverUrl || "https://zenith-cli.onrender.com";
   
   const headers: HeadersInit = {
     "Content-Type": "application/json",

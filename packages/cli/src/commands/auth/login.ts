@@ -12,7 +12,7 @@ import yoctoSpinner from "yocto-spinner";
 import * as z from "zod";
 import { apiRequest } from "../../lib/api.js";
 
-const DEMO_URL = "http://localhost:4000";
+const DEMO_URL = "https://zenith-cli.onrender.com";
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const CONFIG_DIR = path.join(os.homedir(), ".better-auth");
 const TOKEN_FILE = path.join(CONFIG_DIR, "token.json");
