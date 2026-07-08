@@ -1,0 +1,401 @@
+import chalk from "chalk";
+import boxen from "boxen";
+import { text, isCancel, cancel, intro, outro, multiselect } from "@clack/prompts";
+import yoctoSpinner from "yocto-spinner";
+import { marked } from "marked";
+import { markedTerminal } from "marked-terminal";
+import { GoogleAiService } from "../ai/google.service.js";
+import { getStoredToken } from "../commands/auth/login.js";
+import { apiRequest } from "../lib/api.js";
+import {
+  availableTools,
+  getEnabledTools,
+  enableTools,
+  getEnabledToolNames,
+  resetTools,
+} from "../config/tool.config.js";
+
+// @ts-ignore
+marked.setOptions({
+  // @ts-ignore
+  renderer: new markedTerminal({
+    code: chalk.cyan,
+    blockquote: chalk.gray.italic,
+    heading: chalk.green.bold,
+    firstHeading: chalk.magenta.underline.bold,
+    hr: chalk.reset,
+    listitem: chalk.reset,
+    list: chalk.reset,
+    paragraph: chalk.reset,
+    strong: chalk.bold,
+    em: chalk.italic,
+    codespan: chalk.yellow.bgBlack,
+    del: chalk.dim.gray.strikethrough,
+    link: chalk.blue.underline,
+    href: chalk.blue.underline,
+  }),
+});
+
+let aiServiceInstance: GoogleAiService | null = null;
+function getAiService() {
+  if (!aiServiceInstance) {
+    aiServiceInstance = new GoogleAiService();
+  }
+  return aiServiceInstance;
+}
+
+async function getUserFromToken() {
+  const token = await getStoredToken();
+
+  if (!token?.access_token) {
+    throw new Error("Not authenticated. Please run 'zenith login' first.");
+  }
+
+  const spinner = yoctoSpinner({ text: "Authenticating..." }).start();
+
+  let user;
+  try {
+    const data = await apiRequest("/api/user/whoami");
+    if (!data?.success || !data?.user) {
+      throw new Error("Session validation failed");
+    }
+    user = data.user;
+  } catch (error) {
+    spinner.error("Authentication failed");
+    throw new Error("User not found. Please login again.");
+  }
+
+  spinner.success(`Welcome back, ${user.name || "User"}!`);
+  return user;
+}
+
+async function selectTools() {
+  const toolOptions = availableTools.map((tool:any) => ({
+    value: tool.id,
+    label: tool.name,
+    hint: tool.description,
+  }));
+
+  const selectedTools = await multiselect({
+    message: chalk.cyan("Select tools to enable (Space to select, Enter to confirm):"),
+    options: toolOptions,
+    required: false,
+  });
+
+  if (isCancel(selectedTools)) {
+    cancel(chalk.yellow("Tool selection cancelled"));
+    process.exit(0);
+  }
+
+  enableTools(selectedTools);
+
+  if (selectedTools.length === 0) {
+    console.log(chalk.yellow("\n⚠️  No tools selected. AI will work without tools.\n"));
+  } else {
+    const toolsBox = boxen(
+      chalk.green(
+        `` +
+          selectedTools
+            .map((id) => {
+              const tool = availableTools.find((t:any) => t.id === id);
+              return `  • ${tool?.name}`;
+            })
+            .join("\n")
+      ),
+      {
+        padding: 1,
+        margin: { top: 1, bottom: 1 },
+        borderStyle: "round",
+        borderColor: "green",
+        title: "🛠️  Active Tools",
+        titleAlignment: "center",
+      }
+    );
+    console.log(toolsBox);
+  }
+
+  return selectedTools.length > 0;
+}
+
+async function initConversation(userId: string, conversationId: string | null = null, mode: string = "tool") {
+  const spinner = yoctoSpinner({ text: "Loading conversation..." }).start();
+
+  let conversation;
+  try {
+    conversation = await apiRequest("/api/chats", {
+      method: "POST",
+      body: JSON.stringify({ conversationId, mode }),
+    });
+  } catch (error: any) {
+    spinner.error("Failed to load conversation");
+    throw error;
+  }
+
+  spinner.success("Conversation loaded");
+
+  const enabledToolNames = getEnabledToolNames();
+  const toolsDisplay =
+    enabledToolNames.length > 0
+      ? `\n${chalk.gray("Active Tools:")} ${enabledToolNames.join(", ")}`
+      : `\n${chalk.gray("No tools enabled")}`;
+
+  const conversationInfo = boxen(
+    `${chalk.bold("Conversation")}: ${conversation.title}\n${chalk.gray("ID: " + conversation.id)}\n${chalk.gray("Mode: " + conversation.mode)}${toolsDisplay}`,
+    {
+      padding: 1,
+      margin: { top: 1, bottom: 1 },
+      borderStyle: "round",
+      borderColor: "cyan",
+      title: "💬 Tool Calling Session",
+      titleAlignment: "center",
+    }
+  );
+
+  console.log(conversationInfo);
+
+  if (conversation.messages?.length > 0) {
+    console.log(chalk.yellow("📜 Previous messages:\n"));
+    displayMessages(conversation.messages);
+  }
+
+  return conversation;
+}
+
+function displayMessages(messages: any[]) {
+  messages.forEach((msg) => {
+    if (msg.role === "user") {
+      const userBox = boxen(chalk.white(msg.content), {
+        padding: 1,
+        margin: { left: 2, bottom: 1 },
+        borderStyle: "round",
+        borderColor: "blue",
+        title: "👤 You",
+        titleAlignment: "left",
+      });
+      console.log(userBox);
+    } else if (msg.role === "assistant") {
+      const renderedContent = marked.parse(msg.content);
+      const assistantBox = boxen((renderedContent as any).trim(), {
+        padding: 1,
+        margin: { left: 2, bottom: 1 },
+        borderStyle: "round",
+        borderColor: "green",
+        title: "🤖 Assistant (with tools)",
+        titleAlignment: "left",
+      });
+      console.log(assistantBox);
+    }
+  });
+}
+
+async function saveMessage(conversationId: string, role: string, content: string | object) {
+  return await apiRequest("/api/chats/message", {
+    method: "POST",
+    body: JSON.stringify({ conversationId, role, content }),
+  });
+}
+
+async function getAIResponse(conversationId: string) {
+  const spinner = yoctoSpinner({
+    text: "AI is thinking...",
+    color: "cyan",
+  }).start();
+
+  let aiMessages = [];
+  try {
+    const dbMessages = await apiRequest(`/api/chats/${conversationId}/messages`);
+    aiMessages = dbMessages.map((msg: any) => ({
+      role: msg.role,
+      content: typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content),
+    }));
+  } catch (error) {
+    spinner.stop();
+    throw error;
+  }
+
+  const tools = getEnabledTools();
+
+  let fullResponse = "";
+  let isFirstChunk = true;
+  const toolCallsDetected: any[] = [];
+
+  try {
+    const result = await getAiService().sendMessage(
+      aiMessages,
+      (chunk) => {
+        if (isFirstChunk) {
+          spinner.stop();
+          console.log("\n");
+          const header = chalk.green.bold("🤖 Assistant:");
+          console.log(header);
+          console.log(chalk.gray("─".repeat(60)));
+          isFirstChunk = false;
+        }
+        fullResponse += chunk;
+      },
+      tools,
+      (toolCall: any) => {
+        toolCallsDetected.push(toolCall);
+      }
+    );
+
+    if (toolCallsDetected.length > 0) {
+      console.log("\n");
+      const toolCallBox = boxen(
+        toolCallsDetected
+          .map(
+            (tc) =>
+              `${chalk.cyan("🔧 Tool:")} ${tc.toolName}\n${chalk.gray("Args:")} ${JSON.stringify(tc.args, null, 2)}`
+          )
+          .join("\n\n"),
+        {
+          padding: 1,
+          margin: 1,
+          borderStyle: "round",
+          borderColor: "cyan",
+          title: "🛠️  Tool Calls",
+        }
+      );
+      console.log(toolCallBox);
+    }
+
+    if ((result as any).toolResults && (result as any).toolResults.length > 0) {
+      const toolResultBox = boxen(
+        (result as any).toolResults
+          .map(
+            (tr: any) =>
+              `${chalk.green("✅ Tool:")} ${tr.toolName}\n${chalk.gray("Result:")} ${JSON.stringify(tr.result, null, 2).slice(0, 200)}...`
+          )
+          .join("\n\n"),
+        {
+          padding: 1,
+          margin: 1,
+          borderStyle: "round",
+          borderColor: "green",
+          title: "📊 Tool Results",
+        }
+      );
+      console.log(toolResultBox);
+    }
+
+    console.log("\n");
+    const renderedMarkdown = marked.parse(fullResponse);
+    console.log(renderedMarkdown);
+    console.log(chalk.gray("─".repeat(60)));
+    console.log("\n");
+
+    return result.content;
+  } catch (error) {
+    spinner.error("Failed to get AI response");
+    throw error;
+  }
+}
+
+async function updateConversationTitle(conversationId: string, userInput: string, messageCount: number) {
+  if (messageCount === 1) {
+    const title = userInput.slice(0, 50) + (userInput.length > 50 ? "..." : "");
+    await apiRequest(`/api/chats/${conversationId}/title`, {
+      method: "PUT",
+      body: JSON.stringify({ title }),
+    });
+  }
+}
+
+async function chatLoop(conversation: any) {
+  const enabledToolNames = getEnabledToolNames();
+  const helpBox = boxen(
+    `${chalk.gray("• Type your message and press Enter")}\n${chalk.gray("• AI has access to:")} ${enabledToolNames.length > 0 ? enabledToolNames.join(", ") : "No tools"}\n${chalk.gray('• Type "exit" to end conversation')}\n${chalk.gray("• Press Ctrl+C to quit anytime")}`,
+    {
+      padding: 1,
+      margin: { bottom: 1 },
+      borderStyle: "round",
+      borderColor: "gray",
+      dimBorder: true,
+    }
+  );
+
+  console.log(helpBox);
+
+  while (true) {
+    const userInput = await text({
+      message: chalk.blue("💬 Your message"),
+      placeholder: "Type your message...",
+      validate(value) {
+        if (!value || value.trim().length === 0) {
+          return "Message cannot be empty";
+        }
+      },
+    });
+
+    if (isCancel(userInput)) {
+      const exitBox = boxen(chalk.yellow("Chat session ended. Goodbye! 👋"), {
+        padding: 1,
+        margin: 1,
+        borderStyle: "round",
+        borderColor: "yellow",
+      });
+      console.log(exitBox);
+      process.exit(0);
+    }
+
+    if (userInput.toLowerCase() === "exit") {
+      const exitBox = boxen(chalk.yellow("Chat session ended. Goodbye! 👋"), {
+        padding: 1,
+        margin: 1,
+        borderStyle: "round",
+        borderColor: "yellow",
+      });
+      console.log(exitBox);
+      break;
+    }
+
+    const userBox = boxen(chalk.white(userInput), {
+      padding: 1,
+      margin: { left: 2, top: 1, bottom: 1 },
+      borderStyle: "round",
+      borderColor: "blue",
+      title: "👤 You",
+      titleAlignment: "left",
+    });
+    console.log(userBox);
+
+    await saveMessage(conversation.id, "user", userInput);
+    const messages = await apiRequest(`/api/chats/${conversation.id}/messages`);
+    const aiResponse = await getAIResponse(conversation.id);
+    await saveMessage(conversation.id, "assistant", aiResponse);
+    await updateConversationTitle(conversation.id, userInput, messages.length);
+  }
+}
+
+export async function startToolChat(conversationId = null) {
+  try {
+    intro(
+      boxen(chalk.bold.cyan("🛠️  Orbit AI - Tool Calling Mode"), {
+        padding: 1,
+        borderStyle: "double",
+        borderColor: "cyan",
+      })
+    );
+
+    const user = await getUserFromToken();
+
+    await selectTools();
+
+    const conversation = await initConversation(user.id, conversationId, "tool");
+    await chatLoop(conversation);
+
+    resetTools();
+
+    outro(chalk.green("✨ Thanks for using tools!"));
+  } catch (error: any) {
+    const errorBox = boxen(chalk.red(`❌ Error: ${error.message}`), {
+      padding: 1,
+      margin: 1,
+      borderStyle: "round",
+      borderColor: "red",
+    });
+    console.log(errorBox);
+    resetTools();
+    process.exit(1);
+  }
+}
