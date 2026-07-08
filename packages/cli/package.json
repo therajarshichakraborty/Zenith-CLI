@@ -1,0 +1,55 @@
+{
+  "name": "zenith-cli",
+  "version": "1.0.0",
+  "description": "The next-generation terminal-first developer workspace powered by Gemini",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "zenith": "./dist/bin/zenith.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.80",
+    "@clack/prompts": "^1.4.0",
+    "ai": "^6.0.193",
+    "better-auth": "^1.6.11",
+    "boxen": "^8.0.1",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.3",
+    "dotenv": "^17.4.2",
+    "figlet": "^1.11.0",
+    "marked": "^18.0.4",
+    "marked-terminal": "^7.3.0",
+    "open": "^11.0.0",
+    "yocto-spinner": "^1.2.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.2",
+    "typescript": "^5.3.0",
+    "@types/node": "^20.11.0",
+    "@types/figlet": "^1.5.8"
+  },
+  "keywords": [
+    "cli",
+    "gemini",
+    "ai",
+    "agent",
+    "developer-tools",
+    "terminal"
+  ],
+  "author": "Rajarshi Chakraborty",
+  "license": "MIT"
+}
