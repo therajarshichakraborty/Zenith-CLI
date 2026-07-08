@@ -5,13 +5,15 @@ import { deviceAuthorization } from "better-auth/plugins";
 
 const prisma = new PrismaClient();
 
+const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "");
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
 
   basePath: "/api/auth",
-  trustedOrigins: [process.env.FRONTEND_URL || "http://localhost:3000"],
+  trustedOrigins: [frontendUrl],
 
   plugins: [
     deviceAuthorization({

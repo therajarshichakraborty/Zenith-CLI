@@ -9,9 +9,11 @@ export function createApp(): Application {
   const app: Application = express();
   const chatService = new ChatService();
 
+  const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "");
+
   app.use(
     cors({
-      origin: process.env.FRONTEND_URL || "http://localhost:3000",
+      origin: frontendUrl,
       methods: ["GET", "POST", "PUT", "DELETE"],
       credentials: true,
     })
@@ -131,7 +133,6 @@ export function createApp(): Application {
 
   app.get("/device", async (req: Request, res: Response) => {
     const user_code = req.query.user_code || "";
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
     res.redirect(`${frontendUrl}/device?user_code=${user_code}`);
   });
 
