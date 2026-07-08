@@ -20,7 +20,7 @@ export function createApp(): Application {
   );
 
   app.use(express.json());
-  app.all("/api/auth/{*any}", toNodeHandler(auth));
+  app.all("/api/auth/*", toNodeHandler(auth));
 
   // Middleware to authenticate requests via Bearer Token or Cookie Session
   const requireUser = async (req: Request, res: Response, next: () => void) => {
