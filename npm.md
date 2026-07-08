@@ -1,13 +1,13 @@
 # 🚀 Publishing Zenith CLI to NPM: Production Guide
 
-This guide walks you through transforming the **Zenith CLI** codebase into a production-grade, globally installable NPM package. 
+This guide walks you through compiling, testing, and publishing the newly decoupled **Zenith CLI** package to the live NPM registry.
 
-Currently, your CLI code (`server/src/cli`) is closely coupled with your backend server (e.g., directly importing database adapters/Prisma and reading server configurations). To release a package that users can install globally via `npm install -g zenith-cli` or run on-demand via `npx zenith-cli`, you need to **decouple the CLI**, **bundle it**, **configure package settings**, and **publish it**.
+We have successfully **decoupled the CLI from direct database access**, moved all DB/service operations to backend Express API endpoints, created a dedicated sub-package at `packages/cli`, and updated paths accordingly.
 
 ---
 
-## 🗺️ Architectural Roadmap
-In a real production environment, a CLI package follows a decoupled client-server architecture:
+## 🗺️ Completed Architecture
+The CLI is now completely decoupled and communicates with the backend server via HTTP:
 
 ```mermaid
 graph LR
@@ -23,230 +23,137 @@ graph LR
 
 ---
 
-## 🛠️ Step 1: Decoupling the CLI from direct Database Access
-Currently, files like `login.ts` and `chatWithAI.ts` import `prisma` directly:
-```typescript
-import prisma from "../../lib/db"; // ❌ FAILS in production (no local DB on user machine)
+## 🛠️ Step-by-Step Publishing & Testing Instructions
+
+Follow these steps to build, link, test, and publish your package.
+
+### Step 1: Start the Backend Server
+The CLI communicates with the Express backend server to authenticate sessions, load conversations, and persist chat logs. Start the server from the root of the project:
+
+```bash
+# In the project root or server/ directory
+bun run dev
+# OR
+npm run dev
 ```
 
-### ✅ Solution: Move Database Logic to Server Endpoints
-1. **Define API routes on the Express Server** (e.g., `GET /api/user/whoami`, `POST /api/chats`, `POST /api/chats/message`).
-2. **Refactor the CLI to use `fetch`** or an HTTP client (like `axios` or native `fetch` in Node/Bun) to talk to those endpoints:
+### Step 2: Install CLI Dependencies
+Navigate to the new `packages/cli` directory and install the dedicated dependencies:
 
-#### Example: Refactoring `whoamiAction`
-*Before (Direct DB query in CLI):*
-```typescript
-const user = await prisma.user.findFirst({ ... }); // ❌ Local dependency
+```bash
+cd packages/cli
+npm install
 ```
 
-*After (Decoupled API call in CLI):*
-```typescript
-const response = await fetch(`${serverUrl}/api/user/whoami`, {
-  headers: {
-    Authorization: `Bearer ${token.access_token}`
-  }
-});
-const user = await response.json();
+### Step 3: Compile the CLI
+Build the production bundle of the CLI. This uses **tsup** (powered by `esbuild`) to compile and bundle the TypeScript code into a single executable ESM file inside the `dist` directory:
+
+```bash
+npm run build
 ```
+
+Verify that the `dist/` directory has been created and contains:
+- `dist/bin/zenith.js` (executable CLI bundle)
+- `dist/bin/zenith.d.ts` (type definitions)
 
 ---
 
-## 📦 Step 2: Separate CLI into its Own Sub-Package (Recommended)
-Rather than publishing your entire monorepo (which contains backend API, migration files, Next.js frontend, etc.), you should create a dedicated package directory for the CLI.
+### Step 4: Test Your CLI Package Locally
 
-1. Create a `packages/cli` directory:
-   ```bash
-   mkdir -p packages/cli/src
-   ```
-2. Move the CLI source code (`server/src/cli/*`) into `packages/cli/src/`.
-3. Create a clean, dedicated `package.json` in `packages/cli/package.json`.
+To ensure the CLI executes and contacts the server properly, use one of the following local verification methods:
 
----
+#### Method A: NPM Link (Recommended for Development)
+Creating a global symlink lets you run `zenith` anywhere on your machine, with changes automatically reflected upon rebuilds:
 
-## ⚙️ Step 3: Configure `packages/cli/package.json`
-Your package configuration must define metadata, bin command mappings, build outputs, and published file scopes.
-
-Create `packages/cli/package.json` with the following structure:
-
-```json
-{
-  "name": "zenith-cli",
-  "version": "1.0.0",
-  "description": "The next-generation terminal-first developer workspace powered by Gemini",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "bin": {
-    "zenith": "./dist/bin/zenith.js"
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "scripts": {
-    "build": "tsup",
-    "prepublishOnly": "npm run build"
-  },
-  "dependencies": {
-    "@clack/prompts": "^1.4.0",
-    "better-auth": "^1.6.11",
-    "boxen": "^8.0.1",
-    "chalk": "^5.0.0",
-    "commander": "^12.0.0",
-    "dotenv": "^17.0.0",
-    "figlet": "^1.6.0",
-    "marked": "^11.0.0",
-    "marked-terminal": "^6.0.0",
-    "open": "^10.0.0",
-    "yocto-spinner": "^1.0.0",
-    "zod": "^3.22.0"
-  },
-  "devDependencies": {
-    "tsup": "^8.0.0",
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0",
-    "@types/figlet": "^1.5.0"
-  },
-  "keywords": [
-    "cli",
-    "gemini",
-    "ai",
-    "agent",
-    "developer-tools",
-    "terminal"
-  ],
-  "author": "Your Name <your.email@example.com>",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/your-username/Zenith-CLI.git"
-  }
-}
-```
-
-### Key Fields Explained:
-* **`bin`**: Maps the terminal command (`zenith`) to your compiled script.
-* **`files`**: Restricts what files get uploaded to the NPM Registry. This prevents your raw source code, test files, and workspace assets from bloating the download size.
-* **`prepublishOnly`**: Automatically compiles your TypeScript code to JavaScript every time you run `npm publish` to ensure you never release outdated files.
-
----
-
-## ⚡ Step 4: Add Bundling and Shebang Resolution
-Since your package runs in a terminal environment, the entry point must have a **shebang** telling the operating system how to run it.
-
-1. Ensure the entry point file (e.g., `packages/cli/src/bin/zenith.ts`) starts with a shebang:
-   ```typescript
-   #!/usr/bin/env node
-   ```
-   *(Note: If you target **Bun** explicitly, use `#!/usr/bin/env bun`, but `node` is recommended for general compatibility.)*
-
-2. Setup **tsup** (an extremely fast bundler powered by `esbuild`) to bundle your TS code. 
-   Create `packages/cli/tsup.config.ts`:
-   ```typescript
-   import { defineConfig } from "tsup";
-
-   export default defineConfig({
-     entry: ["src/bin/zenith.ts"],
-     format: ["esm"],
-     dts: true,
-     clean: true,
-     minify: true,
-     shims: true, // Injects node globals for ESM compatibility
-     banner: {
-       // Workaround for shebang validation in compiled bundle outputs
-       js: "#!/usr/bin/env node",
-     },
-   });
-   ```
-
----
-
-## 🧪 Step 5: Test Your CLI Package Locally
-Before publishing to the live NPM registry, verify that the compiled bundle installs and executes properly.
-
-### Method A: Local Packaging (Safest)
-1. Run `npm pack` inside `packages/cli`:
-   ```bash
-   npm pack
-   ```
-   This generates a tarball named `zenith-cli-1.0.0.tgz` representing exactly what will be uploaded to npm.
-2. Install the tarball globally to test it:
-   ```bash
-   npm install -g ./zenith-cli-1.0.0.tgz
-   ```
-3. Run the CLI command:
-   ```bash
-   zenith wakeup
-   ```
-4. Verify everything works, then uninstall:
-   ```bash
-   npm uninstall -g zenith-cli
-   ```
-
-### Method B: Package Linking (Hot Reloading)
-1. Inside `packages/cli`, run:
+1. Link the package globally:
    ```bash
    npm link
    ```
-   This creates a symbolic link between your project directory and npm's global bin folder.
-2. Run `zenith` anywhere on your machine. Any edits you make and rebuild (`npm run build`) will take effect immediately.
-3. Once finished, unlink the CLI:
+2. Test the authenticated user commands:
+   ```bash
+   zenith whoami
+   ```
+3. Wake up the AI and start a chat session:
+   ```bash
+   zenith wakeup
+   ```
+4. Verify logout functionality:
+   ```bash
+   zenith logout
+   ```
+5. Once testing is finished, clean up by unlinking:
    ```bash
    npm unlink -g zenith-cli
    ```
 
+#### Method B: Tarball Packaging (Safest for Production Verification)
+This method replicates the exact package state that will be uploaded to the NPM registry:
+
+1. Generate the package tarball:
+   ```bash
+   npm pack
+   ```
+   This creates a file named `zenith-cli-1.0.0.tgz` in your `packages/cli` folder.
+2. Install this tarball globally:
+   ```bash
+   npm install -g ./zenith-cli-1.0.0.tgz
+   ```
+3. Run the commands to verify:
+   ```bash
+   zenith wakeup
+   ```
+4. Once verified, clean up:
+   ```bash
+   npm uninstall -g zenith-cli
+   ```
+
 ---
 
-## 🚀 Step 6: Publish to the NPM Registry
-Once local testing passes, you are ready to publish!
+### Step 5: Publish to NPM Registry
 
-### 1. Create an NPM Account
-If you do not have an NPM account, create one at [npmjs.com](https://www.npmjs.com/signup).
+#### 1. Create an NPM Account
+If you don't have one, sign up at [npmjs.com/signup](https://www.npmjs.com/signup).
 
-### 2. Log in from your Terminal
-Run the login command and complete the authentication process in your browser:
+#### 2. Authenticate Terminal
+Log into your NPM account from your terminal:
 ```bash
 npm login
 ```
 
-### 3. Check for Package Name Availability
-NPM package names must be globally unique. Verify `zenith-cli` is not taken:
+#### 3. Verify Package Name Availability
+NPM packages must have a unique name. Check if `zenith-cli` is available:
 ```bash
 npm info zenith-cli
 ```
-* If it returns package details, it is **taken**. You will need to change the `"name"` in your `package.json` to something else (e.g. `zenith-developer-cli` or a scoped package name like `@yourusername/zenith`).
-* If it returns a `404 Not Found` error, it is **available** for you to claim!
+- If it returns **404 Not Found**, it is **available**!
+- If it returns details/version numbers, it is **already taken**. You should change the `"name"` in `packages/cli/package.json` (e.g. to `@your-username/zenith-cli` or `zenith-workspace-cli`).
 
-### 4. Publish the Package
-Publish to the public registry:
+#### 4. Publish to NPM
+Publish the package to the public registry:
 ```bash
 npm publish --access public
 ```
 
 ---
 
-## 🤖 Step 7: Continuous Integration & Updates
+### Step 6: Continuous Integration & Updates
 
-### 1. Versioning (SemVer)
-To push updates, you must bump the version number in `package.json` before running `npm publish`. NPM uses **Semantic Versioning** (`major.minor.patch`):
-```bash
-# Bumps patch (1.0.0 -> 1.0.1) - for bugs / internal improvements
-npm version patch
+To push updates:
+1. Increment the version number according to Semantic Versioning (SemVer):
+   ```bash
+   # Patch update (bugfixes): 1.0.0 -> 1.0.1
+   npm version patch
 
-# Bumps minor (1.0.0 -> 1.1.0) - for new backward-compatible features
-npm version minor
+   # Minor update (new backward-compatible features): 1.0.0 -> 1.1.0
+   npm version minor
 
-# Bumps major (1.0.0 -> 2.0.0) - for breaking changes
-npm version major
-```
+   # Major update (breaking changes): 1.0.0 -> 2.0.0
+   npm version major
+   ```
+2. Run `npm publish` again.
 
-### 2. Auto-Publish via GitHub Actions
-Add a GitHub Action to automatically publish your package when you push a new release tag.
-Create `.github/workflows/publish.yml`:
+#### Auto-Publish via GitHub Actions
+Add a GitHub action to automatically publish releases. Create `.github/workflows/publish.yml`:
 
 ```yaml
 name: Publish to NPM
@@ -276,4 +183,13 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         working-directory: ./packages/cli
 ```
-*Generate an automation token on [npmjs.com/settings/tokens](https://www.npmjs.com/settings/tokens) and add it as a secret named `NPM_TOKEN` in your GitHub Repository settings.*
+*Generate an automation token on [npmjs.com/settings/tokens](https://www.npmjs.com/settings/tokens) and add it as a secret named `NPM_TOKEN` in your repository.*
+
+---
+
+## 🧹 Housekeeping
+To prevent obsolete source code from causing confusion, we recommend deleting the old, tightly coupled CLI directory:
+```bash
+git rm -rf server/src/cli
+```
+*(The server's local `npm run zenith` command has been updated to automatically target `packages/cli/src/bin/zenith.ts` so developers can still run it locally).*

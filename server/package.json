@@ -2,7 +2,7 @@
   "name": "server",
   "version": "1.0.0",
   "bin": {
-    "zenith": "./src/cli/main.ts"
+    "zenith": "../packages/cli/src/bin/zenith.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.80",
@@ -32,7 +32,7 @@
   },
   "private": true,
   "scripts": {
-    "zenith": "bun src/cli/main.ts",
+    "zenith": "bun ../packages/cli/src/bin/zenith.ts",
     "dev": "bun --watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
