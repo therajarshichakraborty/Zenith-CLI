@@ -150,7 +150,7 @@ export async function loginAction(opts: any) {
     console.log(chalk.cyan("Device Authorization is Required"));
     console.log("");
     console.log(`Please visit: ${chalk.underline.blue(verification_uri_complete || verification_uri)}`);
-    console.log(`Enter code: ${chalk.bold.green(user_code)}`);
+    console.log(`Enter code:   ${chalk.bold.green(user_code)}`);
     console.log("");
 
     const shouldOpen = await confirm({
@@ -161,11 +161,12 @@ export async function loginAction(opts: any) {
     if (!isCancel(shouldOpen) && shouldOpen) {
       const urlToOpen = verification_uri_complete || verification_uri;
       await open(urlToOpen);
+      console.log(chalk.gray("Browser opened. Please sign in and approve the device."));
     }
 
     console.log(chalk.gray(`Waiting for authorization (expires in ${Math.floor(expires_in / 60)} minutes)...`));
 
-    const token = await pollForToken(authClient, device_code, clientId, interval);
+    const token = await pollForToken(authClient, device_code, clientId, interval, expires_in);
 
     if (token) {
       const save = await storeToken(token);
@@ -174,18 +175,14 @@ export async function loginAction(opts: any) {
         console.log(
           chalk.yellow("Warning: Token could not be stored. You'll need to provide it manually when needed.")
         );
-        console.log(chalk.gray("Token"));
         console.log(chalk.cyan("you may need authentication again soon"));
       } else {
         console.log(chalk.green("✅ Authentication Successful!"));
       }
     }
 
-    /* Todo Get User Data */
-
     outro(chalk.green("User Login Successfully"));
-    console.log(chalk.cyan(`Token Saved to ${TOKEN_FILE}`));
-
+    console.log(chalk.cyan(`Token saved to ${TOKEN_FILE}`));
     console.log(chalk.gray("You are all set to use Zenith AI"));
     console.log(chalk.blue("run - zenith ai --help"));
   } catch (error: any) {
@@ -195,13 +192,21 @@ export async function loginAction(opts: any) {
   }
 }
 
-async function pollForToken(authClient: any, deviceCode: any, clientId: any, initialInterval: any) {
+async function pollForToken(authClient: any, deviceCode: any, clientId: any, initialInterval: any, expiresIn: number = 300) {
   let pollingInterval = initialInterval;
   const spinner = yoctoSpinner({ text: "", color: "cyan" });
   let dots = 0;
+  const deadline = Date.now() + expiresIn * 1000;
 
-  return new Promise((resolve, _) => {
+  return new Promise((resolve, reject) => {
     const poll = async () => {
+      // Hard stop if past deadline
+      if (Date.now() >= deadline) {
+        spinner.stop();
+        logger.error("Authorization timed out. The device code has expired.");
+        process.exit(1);
+      }
+
       dots = (dots + 1) % 4;
       spinner.text = chalk.gray(`Polling for authorization${".".repeat(dots)}${" ".repeat(3 - dots)}`);
       if (!spinner.isSpinning) spinner.start();
@@ -219,13 +224,13 @@ async function pollForToken(authClient: any, deviceCode: any, clientId: any, ini
         });
 
         if (data?.access_token) {
-          console.log(chalk.bold.yellow(`Your access token: ${data.access_token}`));
           spinner.stop();
           resolve(data);
           return;
         } else if (error) {
           switch (error.error) {
             case "authorization_pending":
+              // Normal — keep polling
               break;
             case "slow_down":
               pollingInterval += 5;
@@ -240,20 +245,24 @@ async function pollForToken(authClient: any, deviceCode: any, clientId: any, ini
               process.exit(1);
             default:
               spinner.stop();
-              logger.error(`Error: ${error.error_description}`);
+              logger.error(`Error: ${error.error_description || error.error}`);
               process.exit(1);
           }
         }
-      } catch (error: any) {
+      } catch (err: any) {
         spinner.stop();
-        logger.error(`Network error: ${error.message}`);
+        logger.error(`Network error: ${err.message}`);
         process.exit(1);
       }
 
-      setTimeout(poll, pollingInterval * 1000);
+      // Schedule next poll
+      const msUntilDeadline = deadline - Date.now();
+      const nextInterval = Math.min(pollingInterval * 1000, msUntilDeadline);
+      setTimeout(poll, nextInterval);
     };
 
-    setTimeout(poll, pollingInterval * 1000);
+    // Poll immediately on first call (don't wait the full interval)
+    poll();
   });
 }
 
