@@ -11,4 +11,7 @@ export default defineConfig({
     // Workaround for shebang validation in compiled bundle outputs
     js: "#!/usr/bin/env node",
   },
+  env: {
+    GITHUB_CLIENT_ID: "Ov23li7U6SLw6p7M2kbR",
+  },
 });

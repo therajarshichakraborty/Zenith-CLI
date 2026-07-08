@@ -9,7 +9,7 @@ export class GoogleAiService {
 
   constructor() {
     if (!googleConfig.googleAPIKey) {
-      throw new Error("Google api key not found from environmental variables");
+      throw new Error("Google API key not found. Please set the GOOGLE_GENERATIVE_AI_API_KEY environment variable.");
     }
     this.model = google(googleConfig.model);
   }

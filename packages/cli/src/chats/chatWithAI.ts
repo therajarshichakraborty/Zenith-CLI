@@ -35,7 +35,9 @@ const indent = (text: string, spaces = "    ") => {
     .join("\n");
 };
 
+// @ts-ignore
 marked.setOptions({
+  // @ts-ignore
   renderer: new markedTerminal({
     code: chalk.yellow,
     blockquote: chalk.gray.italic,
@@ -52,10 +54,16 @@ marked.setOptions({
     del: chalk.dim.gray.strikethrough,
     link: chalk.blue.underline,
     href: chalk.blue.underline,
-  }) as any,
+  }) ,
 });
 
-const aiService = new GoogleAiService();
+let aiServiceInstance: GoogleAiService | null = null;
+function getAiService() {
+  if (!aiServiceInstance) {
+    aiServiceInstance = new GoogleAiService();
+  }
+  return aiServiceInstance;
+}
 
 async function getUserFromToken() {
   const token = await getStoredToken();
@@ -144,7 +152,7 @@ async function getAIResponse(conversationId: string) {
   let fullResponse = "";
 
   try {
-    await aiService.sendMessage(aiMessages, (chunk) => {
+    await getAiService().sendMessage(aiMessages, (chunk) => {
       fullResponse += chunk;
     });
 
@@ -203,6 +211,7 @@ export async function startChat(mode: string = "chat", conversationId: string | 
 function displayMessages(messages: { role: string; content: string }[]) {
   messages.forEach((msg, i) => {
     if (msg.role === "user") {
+      //@ts-ignore
       print(`${PAD}${C.blue.bold("you")}` + `  ${C.muted("─".repeat(W - 7))}`);
       gap();
       print(indent(C.white(msg.content)));
@@ -243,6 +252,7 @@ async function chatLoop(conversation: any) {
 
   while (true) {
     const userInput = await text({
+      //@ts-ignore
       message: C.blue.bold("you"),
       placeholder: "Type a message…",
       validate(value) {

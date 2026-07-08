@@ -6,7 +6,13 @@ import { getStoredToken } from "../commands/auth/login.js";
 import { apiRequest } from "../lib/api.js";
 import { generateApplication } from "../config/agent.config.js";
 
-const aiService = new GoogleAiService();
+let aiServiceInstance: GoogleAiService | null = null;
+function getAiService() {
+  if (!aiServiceInstance) {
+    aiServiceInstance = new GoogleAiService();
+  }
+  return aiServiceInstance;
+}
 
 async function getUserFromToken() {
   const token = await getStoredToken();
@@ -128,7 +134,7 @@ async function agentLoop(conversation: any) {
     await saveMessage(conversation.id, "user", userInput);
 
     try {
-      const result = await generateApplication(userInput, aiService, process.cwd());
+      const result = await generateApplication(userInput, getAiService(), process.cwd());
 
       if (result && result.success) {
         const responseMessage =

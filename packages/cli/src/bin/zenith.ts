@@ -1,7 +1,3 @@
-#!/usr/bin/env node
-
-import dotenv from "dotenv";
-dotenv.config();
 
 import chalk from "chalk";
 import figlet from "figlet";
@@ -9,7 +5,9 @@ import { Command } from "commander";
 import { login, logout, whoami } from "../commands/auth/login.js";
 import { wakeUp } from "../commands/ai/wakeUp.js";
 
-const VERSION = "1.0.0";
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const VERSION = require("../package.json").version;
 
 function gradientBanner(text: string): string {
   const trimmed = text.trimEnd();

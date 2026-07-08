@@ -10,10 +10,7 @@ import os from "node:os";
 import path from "node:path";
 import yoctoSpinner from "yocto-spinner";
 import * as z from "zod";
-import dotenv from "dotenv";
 import { apiRequest } from "../../lib/api.js";
-
-dotenv.config();
 
 const DEMO_URL = "http://localhost:4000";
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;

@@ -15,8 +15,10 @@ import {
   resetTools,
 } from "../config/tool.config.js";
 
-marked.use(
-  markedTerminal({
+// @ts-ignore
+marked.setOptions({
+  // @ts-ignore
+  renderer: new markedTerminal({
     code: chalk.cyan,
     blockquote: chalk.gray.italic,
     heading: chalk.green.bold,
@@ -31,10 +33,16 @@ marked.use(
     del: chalk.dim.gray.strikethrough,
     link: chalk.blue.underline,
     href: chalk.blue.underline,
-  }) as any
-);
+  }),
+});
 
-const aiService = new GoogleAiService();
+let aiServiceInstance: GoogleAiService | null = null;
+function getAiService() {
+  if (!aiServiceInstance) {
+    aiServiceInstance = new GoogleAiService();
+  }
+  return aiServiceInstance;
+}
 
 async function getUserFromToken() {
   const token = await getStoredToken();
@@ -62,7 +70,7 @@ async function getUserFromToken() {
 }
 
 async function selectTools() {
-  const toolOptions = availableTools.map((tool) => ({
+  const toolOptions = availableTools.map((tool:any) => ({
     value: tool.id,
     label: tool.name,
     hint: tool.description,
@@ -89,7 +97,7 @@ async function selectTools() {
         `` +
           selectedTools
             .map((id) => {
-              const tool = availableTools.find((t) => t.id === id);
+              const tool = availableTools.find((t:any) => t.id === id);
               return `  • ${tool?.name}`;
             })
             .join("\n")
@@ -212,7 +220,7 @@ async function getAIResponse(conversationId: string) {
   const toolCallsDetected: any[] = [];
 
   try {
-    const result = await aiService.sendMessage(
+    const result = await getAiService().sendMessage(
       aiMessages,
       (chunk) => {
         if (isFirstChunk) {
