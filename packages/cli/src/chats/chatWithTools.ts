@@ -15,26 +15,29 @@ import {
   resetTools,
 } from "../config/tool.config.js";
 
-// @ts-ignore
-marked.setOptions({
-  // @ts-ignore
-  renderer: new markedTerminal({
-    code: chalk.cyan,
-    blockquote: chalk.gray.italic,
-    heading: chalk.green.bold,
-    firstHeading: chalk.magenta.underline.bold,
-    hr: chalk.reset,
-    listitem: chalk.reset,
-    list: chalk.reset,
-    paragraph: chalk.reset,
-    strong: chalk.bold,
-    em: chalk.italic,
-    codespan: chalk.yellow.bgBlack,
-    del: chalk.dim.gray.strikethrough,
-    link: chalk.blue.underline,
-    href: chalk.blue.underline,
-  }),
-});
+function renderMarkdown(text: string): string {
+  try {
+    const renderer = new markedTerminal({
+      code: (code: string) => chalk.cyan(code),
+      blockquote: (text: string) => chalk.gray.italic(text),
+      heading: (text: string) => chalk.green.bold(text),
+      firstHeading: (text: string) => chalk.magenta.underline.bold(text),
+      hr: () => chalk.reset("─".repeat(80)),
+      listitem: (text: string) => chalk.reset(text),
+      paragraph: (text: string) => chalk.reset(text),
+      strong: (text: string) => chalk.bold(text),
+      em: (text: string) => chalk.italic(text),
+      codespan: (code: string) => chalk.yellow.bgBlack(code),
+      del: (text: string) => chalk.dim.gray.strikethrough(text),
+      link: (_href: string, _title: string, text: string) => chalk.blue.underline(text),
+    });
+    // @ts-ignore
+    marked.setOptions({ renderer });
+    return marked.parse(text) as string;
+  } catch {
+    return text;
+  }
+}
 
 let aiServiceInstance: GoogleAiService | null = null;
 function getAiService() {

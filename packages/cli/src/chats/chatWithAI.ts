@@ -10,13 +10,20 @@ import { apiRequest } from "../lib/api.js";
 // Console colors & layout helpers
 const C = {
   purple: chalk.hex("#8b5cf6"),
+  purpleBold: chalk.hex("#8b5cf6").bold,
   cyan: chalk.hex("#06b6d4"),
   gray: chalk.hex("#4b5563"),
   white: chalk.hex("#f3f4f6"),
+  whiteBold: chalk.hex("#f3f4f6").bold,
   green: chalk.hex("#10b981"),
+  greenBold: chalk.hex("#10b981").bold,
   muted: chalk.hex("#6b7280"),
+  mutedItalic: chalk.hex("#6b7280").italic,
   italic: chalk.italic,
   error: chalk.hex("#f43f5e"),
+  errorBold: chalk.hex("#f43f5e").bold,
+  blue: chalk.hex("#3b82f6"),
+  blueBold: chalk.hex("#3b82f6").bold,
 };
 
 const W = 96; // Terminal width target
@@ -35,27 +42,42 @@ const indent = (text: string, spaces = "    ") => {
     .join("\n");
 };
 
-// @ts-ignore
-marked.setOptions({
-  // @ts-ignore
-  renderer: new markedTerminal({
-    code: chalk.yellow,
-    blockquote: chalk.gray.italic,
-    html: chalk.green,
-    heading: chalk.bold.cyan,
-    firstHeading: chalk.bold.cyan,
-    hr: chalk.gray,
-    listitem: chalk.white,
-    table: chalk.white,
-    paragraph: chalk.white,
-    strong: chalk.bold,
-    em: chalk.italic,
-    codespan: chalk.yellow.bgBlack,
-    del: chalk.dim.gray.strikethrough,
-    link: chalk.blue.underline,
-    href: chalk.blue.underline,
-  }) ,
-});
+function getMarkedRenderer() {
+  try {
+    //@ts-ignore
+    return new markedTerminal({
+      code: (code: string) => chalk.yellow(code),
+      blockquote: (text: string) => chalk.gray.italic(text),
+      html: (html: string) => chalk.green(html),
+      heading: (text: string) => chalk.bold.cyan(text),
+      firstHeading: (text: string) => chalk.bold.cyan(text),
+      hr: () => chalk.gray("─".repeat(80)),
+      listitem: (text: string) => chalk.white(text),
+      paragraph: (text: string) => chalk.white(text),
+      strong: (text: string) => chalk.bold(text),
+      em: (text: string) => chalk.italic(text),
+      codespan: (code: string) => chalk.yellow.bgBlack(code),
+      del: (text: string) => chalk.dim.gray.strikethrough(text),
+      //@ts-ignore
+      link: (_href: string, _title: string, text: string) => chalk.blue.underline(text),
+    });
+  } catch {
+    return null;
+  }
+}
+
+function renderMarkdown(text: string): string {
+  try {
+    const renderer = getMarkedRenderer();
+    if (renderer) {
+      // @ts-ignore
+      marked.setOptions({ renderer });
+    }
+    return marked.parse(text) as string;
+  } catch {
+    return text;
+  }
+}
 
 let aiServiceInstance: GoogleAiService | null = null;
 function getAiService() {
@@ -86,7 +108,7 @@ async function getUserFromToken() {
     throw new Error("User not found. Please login again.");
   }
 
-  spinner.success(C.green("✓") + "  " + C.white.bold(user.name || "User") + C.muted("  authenticated"));
+  spinner.success(C.green("✓") + "  " + C.whiteBold(user.name || "User") + C.muted("  authenticated"));
   return user;
 }
 
@@ -109,14 +131,14 @@ async function initConvo(userId: string, conversationId: string | null = null, m
   gap();
   boldRule();
   gap();
-  print(`${PAD}${C.purple.bold("◆ " + conversation.title)}`);
+  print(`${PAD}${C.purpleBold("◆ " + conversation.title)}`);
   print(`${PAD}${C.muted(conversation.id + "  ·  mode: " + conversation.mode)}`);
   gap();
   boldRule();
 
   if (conversation.messages?.length > 0) {
     gap();
-    print(`${PAD}${C.muted.italic("↑  " + conversation.messages.length + " message(s) from previous session")}`);
+    print(`${PAD}${C.mutedItalic("↑  " + conversation.messages.length + " message(s) from previous session")}`);
     gap();
     displayMessages(conversation.messages);
   }
@@ -159,10 +181,10 @@ async function getAIResponse(conversationId: string) {
     spinner.stop();
 
     gap();
-    print(`${PAD}${C.green.bold("◆ Zenith")}` + `  ${C.muted("─".repeat(W - 12))}`);
+    print(`${PAD}${C.greenBold("◆ Zenith")}` + `  ${C.muted("─".repeat(W - 12))}`);
     gap();
 
-    const rendered = marked.parse(fullResponse) as string;
+    const rendered = renderMarkdown(fullResponse);
     const trimmed = rendered.trimEnd();
 
     print(indent(trimmed, PAD));
@@ -184,7 +206,7 @@ export async function startChat(mode: string = "chat", conversationId: string | 
 
     gap();
     print(
-      `${PAD}${C.purple.bold("◆  Z E N I T H")}` +
+      `${PAD}${C.purpleBold("◆  Z E N I T H")}` +
         `  ${C.muted("·")}  ${C.muted("AI Chat")}` +
         `  ${C.muted("·")}  ${C.muted("v0.1.0")}`
     );
@@ -202,7 +224,7 @@ export async function startChat(mode: string = "chat", conversationId: string | 
     gap();
   } catch (error: any) {
     gap();
-    print(`${PAD}${C.error("✖")}  ${C.error.bold("Error:")}  ${C.white(error.message)}`);
+    print(`${PAD}${C.error("✖")}  ${C.errorBold("Error:")}  ${C.white(error.message)}`);
     gap();
     process.exit(1);
   }
@@ -212,14 +234,14 @@ function displayMessages(messages: { role: string; content: string }[]) {
   messages.forEach((msg, i) => {
     if (msg.role === "user") {
       //@ts-ignore
-      print(`${PAD}${C.blue.bold("you")}` + `  ${C.muted("─".repeat(W - 7))}`);
+      print(`${PAD}${C.blueBold("you")}` + `  ${C.muted("─".repeat(W - 7))}`);
       gap();
       print(indent(C.white(msg.content)));
       gap();
     } else {
-      print(`${PAD}${C.green.bold("◆ Zenith")}` + `  ${C.muted("─".repeat(W - 12))}`);
+      print(`${PAD}${C.greenBold("◆ Zenith")}` + `  ${C.muted("─".repeat(W - 12))}`);
       gap();
-      const rendered = marked.parse(msg.content) as string;
+      const rendered = renderMarkdown(msg.content);
       print(indent(rendered.trimEnd()));
       gap();
     }
@@ -244,7 +266,7 @@ async function updateConversationTitle(conversationId: string, userInput: string
 async function chatLoop(conversation: any) {
   gap();
   print(
-    `${PAD}${C.muted("ctrl+c / ")}${C.muted.italic("exit")}${C.muted(" to quit  ·  markdown rendered in responses")}`
+    `${PAD}${C.muted("ctrl+c / ")}${chalk.hex("#6b7280").italic("exit")}${C.muted(" to quit  ·  markdown rendered in responses")}`
   );
   gap();
 
@@ -253,7 +275,7 @@ async function chatLoop(conversation: any) {
   while (true) {
     const userInput = await text({
       //@ts-ignore
-      message: C.blue.bold("you"),
+      message: chalk.hex("#3b82f6").bold("you"),
       placeholder: "Type a message…",
       validate(value) {
         if (!value || value.trim().length === 0) {
