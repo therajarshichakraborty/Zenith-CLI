@@ -14,10 +14,14 @@ export function LoginForm({ callbackUrl = "/" }: { callbackUrl?: string }) {
   const onLogin = async () => {
     try {
       setIsLoading(true);
-      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+      // Build absolute callbackURL so Better Auth redirects back to the frontend
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const absoluteCallbackUrl = callbackUrl.startsWith("http")
+        ? callbackUrl
+        : `${origin}${callbackUrl}`;
       await authClient.signIn.social({
         provider: "github",
-        callbackURL: `${origin}${callbackUrl}`,
+        callbackURL: absoluteCallbackUrl,
       });
     } finally {
       setIsLoading(false);

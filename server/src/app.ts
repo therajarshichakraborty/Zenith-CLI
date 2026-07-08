@@ -9,7 +9,7 @@ export function createApp(): Application {
   const app: Application = express();
   const chatService = new ChatService();
 
-  const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "");
+  const frontendUrl = (process.env.FRONTEND_URL || "https://zenith-cli-labs.vercel.app").replace(/\/$/, "");
 
   app.use(
     cors({
